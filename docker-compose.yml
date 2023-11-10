@@ -1,0 +1,30 @@
+version: '3'
+services:
+  selenium:
+    image: selenium/standalone-chrome:4.14.1-20231025
+    restart: always
+    container_name: wechat_selenium
+    shm_size: 2g
+    environment:
+      - SE_NODE_MAX_SESSIONS=4
+      - TZ=Asia/Shanghai
+    ports:
+      - "4444:4444"
+
+  wechat_bot_python:
+    image: wechat_bot_python
+    restart: always
+    container_name: wechat_bot_python
+    volumes:
+      - ./itchat.pkl:/app/itchat.pkl
+    environment:
+      # 智谱AI API Key，可从 https://open.bigmodel.cn/ 获取
+      - ZHIPUAI_KEY=
+      # 用于文章备份
+      - GITHUB_TOKEN=
+      # Github 用户名
+      - GITHUB_USERNAME=zzturn
+      # Github 仓库名 
+      - GITHUB_REPO=wechat_backup
+      # docker compose 启动程序时，请不要修改此项
+      - SELENIUM_SERVER=http://selenium:4444/wd/hub
