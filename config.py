@@ -6,6 +6,9 @@ load_dotenv()
 
 config = {
     'zhipuai_key': os.getenv('ZHIPUAI_KEY', ''),
+    'openai_key': os.getenv('OPENAI_API_KEY', ''),
+    'openai_api_base': os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1/chat/completions').rstrip('/'),
+    'openai_model': os.getenv('OPENAI_MODEL', 'gpt-4'),
     'ai_prompt': os.getenv('AI_PROMPT', '请帮我总结一下这篇文章\n'),
     'github_token': os.getenv('GITHUB_TOKEN', ''),
     'github_username': os.getenv('GITHUB_USERNAME', ''),

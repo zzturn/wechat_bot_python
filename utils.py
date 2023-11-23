@@ -158,7 +158,27 @@ def summarize_content(prompt: str, api_key: str, model_name="chatglm_turbo", **k
                                         top_p=0.7,
                                         return_type="text",
                                         **kwargs)
-    return response
+    response.raise_for_status()
+    # need test
+    return {'content': response['data']['choices'][0]['content'], 'usage': response['data']['usage']}
+
+
+def summarize_content_by_openai(prompt: str, api_key: str, base_url='https://api.openai.com/v1/chat/completions',
+                                model_name="gpt-4", **kwargs):
+    response = requests.post(base_url,
+                             json={
+                                 "messages": [{"role": "user", "content": prompt}],
+                                 "model": model_name,
+                             },
+                             headers={
+                                 'Authorization': f'Bearer {api_key}',
+                                 'User-Agent': 'iOS App, Version 6.2.4',
+                             },
+                             timeout=120)
+    response.raise_for_status()
+    data = response.json()
+
+    return {'content': data['choices'][0]['Message']['content'], 'usage': data['usage']}
 
 
 def get_url_html(url: str, selenium_path: str = '', mobile: bool = False):
@@ -281,7 +301,14 @@ def test_get_url_html():
     print(res)
 
 
+def test_summarize_content_by_openai():
+    prompt = "what is ojbk in Chinese"
+    res = summarize_content_by_openai(prompt, api_key="sk-abc")
+    print(res)
+
+
 if __name__ == '__main__':
+    test_summarize_content_by_openai()
     test_create_or_update_file()
     test_add_files_to_repo()
     test_get_url_html()

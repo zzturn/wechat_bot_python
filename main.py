@@ -2,9 +2,11 @@ from urllib.parse import quote
 
 import itchat
 import xmltodict
+from requests import HTTPError
 
 from config import config
-from utils import summarize_content, github_repo, sanitize_string, get_url_html, get_text_from_html, setup_logger
+from utils import summarize_content, github_repo, sanitize_string, get_url_html, get_text_from_html, setup_logger, \
+    summarize_content_by_openai
 
 text_msgs = {}
 link_msgs = {}
@@ -83,10 +85,10 @@ def parse_link(link_msg):
     xml = link_msg['Content']
     info = xmltodict.parse(xml)['msg']['appmsg']
     return {
-        'title': info['title'],
-        'url': info['url'],
-        'description': info['des'],
-        'source': info['sourcedisplayname']
+        'title': info['title'] if 'title' in info else '',
+        'url': info['url'] if 'url' in info else '',
+        'description': info['des'] if 'des' in info else '',
+        'source': info['sourcedisplayname'] if 'sourcedisplayname' in info else '',
     }
 
 
@@ -119,17 +121,18 @@ def summarize(link_info, html):
     error_msg = 'no error'
     for i in range(3):
         try:
-            response = summarize_content(prompt=f"{config['ai_prompt']}{text}", api_key=config['zhipuai_key'])
-            if response['code'] == 200:
-                logger.info(f"🐱 文章->{link_info['url']} 摘要第生成成功! Cost: {response['data']['usage']}")
-                msg = f"{response['data']['choices'][0]['content']}\n\n{response['data']['usage']}"
-                return msg
-            else:
-                logger.warning(f"😿 文章->{link_info['url']} 摘要第 {i + 1} 次返回错误! Error: {response['msg']}")
-                error_msg = response['msg']
-                continue
+            # response = summarize_content(prompt=f"{config['ai_prompt']}{text}", api_key=config['zhipuai_key'])
+            res = summarize_content_by_openai(prompt=f"{config['ai_prompt']}{text}",
+                                              model_name=config['openai_model'], api_key=config['openai_key'],
+                                              base_url=config['openai_api_base'])
+            msg = f"{res['content']}\n\n{res['usage']}"
+            return msg
+        except HTTPError as e:
+            logger.error(f"😿 文章->{link_info['url']} 摘要第 {i + 1} 次生成失败! Error: {e.response.text}")
+            error_msg = e.response.text
+            continue
         except Exception as e:
-            logger.error()(f"😿 文章->{link_info['url']} 摘要第 {i + 1} 次生成失败! Error: {str(e)}")
+            logger.error(f"😿 文章->{link_info['url']} 摘要第 {i + 1} 次生成失败! Error: {str(e)}")
             error_msg = str(e)
             continue
     return f"摘要生成失败，请稍后再试。\n\n{error_msg}"
@@ -149,5 +152,6 @@ page_url: https://{config['github_username']}.github.io/{config['github_repo']}/
         return f"备份失败，请稍后再试。{str(e)}"
 
 
-itchat.auto_login(hotReload=True, enableCmdQR=2)
-itchat.run()
+if __name__ == '__main__':
+    itchat.auto_login(hotReload=True, enableCmdQR=2)
+    itchat.run()
